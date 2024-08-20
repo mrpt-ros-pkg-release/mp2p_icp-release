@@ -1,6 +1,6 @@
 /* -------------------------------------------------------------------------
  *  A repertory of multi primitive-to-primitive (MP2P) ICP algorithms in C++
- * Copyright (C) 2018-2021 Jose Luis Blanco, University of Almeria
+ * Copyright (C) 2018-2024 Jose Luis Blanco, University of Almeria
  * See LICENSE for license information.
  * ------------------------------------------------------------------------- */
 /**
@@ -24,7 +24,7 @@ namespace mp2p_icp
 /** \addtogroup  mp2p_icp_grp
  * @{ */
 
-/** Details on an ICP run, loadable from the GUI tool mp2p-icp-log-viewer.
+/** Details on an ICP run, loadable from the GUI tool icp-log-viewer.
  *
  */
 class LogRecord : public mrpt::serialization::CSerializable
@@ -43,8 +43,9 @@ class LogRecord : public mrpt::serialization::CSerializable
 
     mrpt::math::TPose3D initialGuessLocalWrtGlobal;
 
-    mp2p_icp::Parameters icpParameters;
-    mp2p_icp::Results    icpResult;
+    mp2p_icp::Parameters          icpParameters;
+    mp2p_icp::Results             icpResult;
+    std::map<std::string, double> dynamicVariables;
 
     struct DebugInfoPerIteration
     {

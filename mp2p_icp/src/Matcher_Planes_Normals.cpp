@@ -1,6 +1,6 @@
 /* -------------------------------------------------------------------------
  *  A repertory of multi primitive-to-primitive (MP2P) ICP algorithms in C++
- * Copyright (C) 2018-2021 Jose Luis Blanco, University of Almeria
+ * Copyright (C) 2018-2024 Jose Luis Blanco, University of Almeria
  * See LICENSE for license information.
  * ------------------------------------------------------------------------- */
 /**
@@ -95,6 +95,7 @@ void f2()
             pairings.paired_pt2pl.emplace_back(pl_this, pt_other);
         }
     }
+    out.potential_pairings += pcLocal.size() * maxPt2PtCorrespondences;
 }
 
 #endif
