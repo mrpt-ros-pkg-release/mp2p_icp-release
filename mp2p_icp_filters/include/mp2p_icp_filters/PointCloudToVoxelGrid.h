@@ -1,6 +1,6 @@
 /* -------------------------------------------------------------------------
  * A repertory of multi primitive-to-primitive (MP2P) ICP algorithms in C++
- * Copyright (C) 2018-2021 Jose Luis Blanco, University of Almeria
+ * Copyright (C) 2018-2024 Jose Luis Blanco, University of Almeria
  * See LICENSE for license information.
  * ------------------------------------------------------------------------- */
 /**
@@ -12,9 +12,8 @@
 
 #pragma once
 
-#include <mrpt/containers/CDynamicGrid3D.h>
+#include <mrpt/core/pimpl.h>
 #include <mrpt/maps/CPointsMap.h>
-#include <mrpt/math/TPoint3D.h>
 
 #include <vector>
 
@@ -28,13 +27,16 @@ namespace mp2p_icp_filters
 class PointCloudToVoxelGrid
 {
    public:
-    PointCloudToVoxelGrid() = default;
+    PointCloudToVoxelGrid();
     ~PointCloudToVoxelGrid() {}
 
-    void resize(
-        const mrpt::math::TPoint3D& min_corner,
-        const mrpt::math::TPoint3D& max_corner, const float voxel_size);
+    /** Changes the voxel resolution, clearing past contents */
+    void setResolution(const float voxel_size);
+
     void processPointCloud(const mrpt::maps::CPointsMap& p);
+
+    /** Remove all points and internal data.
+     */
     void clear();
 
     struct Parameters
@@ -55,15 +57,75 @@ class PointCloudToVoxelGrid
     struct voxel_t
     {
         std::vector<std::size_t> indices;
-        bool                     is_empty{true};
     };
-    using grid_t = mrpt::containers::CDynamicGrid3D<voxel_t, float>;
 
-    /** The point indices in each voxel. Directly access to each desired cell,
-     * use its iterator, etc. */
-    grid_t pts_voxels;
+    struct indices_t
+    {
+        indices_t(int32_t cx, int32_t cy, int32_t cz)
+            : cx_(cx), cy_(cy), cz_(cz)
+        {
+        }
 
-    std::vector<uint32_t> used_voxel_indices;
+        int32_t cx_ = 0, cy_ = 0, cz_ = 0;
+
+        bool operator==(const indices_t& o) const
+        {
+            return cx_ == o.cx_ && cy_ == o.cy_ && cz_ == o.cz_;
+        }
+    };
+
+    /** This implements the optimized hash from this paper:
+     *
+     *  Teschner, M., Heidelberger, B., Müller, M., Pomerantes, D., & Gross, M.
+     * H. (2003, November). Optimized spatial hashing for collision detection of
+     * deformable objects. In Vmv (Vol. 3, pp. 47-54).
+     *
+     */
+    struct IndicesHash
+    {
+        /// Hash operator for unordered maps:
+        std::size_t operator()(const indices_t& k) const noexcept
+        {
+            // These are the implicit assumptions of the reinterpret cast below:
+            static_assert(sizeof(indices_t::cx_) == sizeof(uint32_t));
+            static_assert(offsetof(indices_t, cx_) == 0 * sizeof(uint32_t));
+            static_assert(offsetof(indices_t, cy_) == 1 * sizeof(uint32_t));
+            static_assert(offsetof(indices_t, cz_) == 2 * sizeof(uint32_t));
+
+            const uint32_t* vec = reinterpret_cast<const uint32_t*>(&k);
+            return ((1 << 20) - 1) &
+                   (vec[0] * 73856093 ^ vec[1] * 19349663 ^ vec[2] * 83492791);
+        }
+
+        // k1 < k2?
+        bool operator()(const indices_t& k1, const indices_t& k2) const noexcept
+        {
+            if (k1.cx_ != k2.cx_) return k1.cx_ < k2.cx_;
+            if (k1.cy_ != k2.cy_) return k1.cy_ < k2.cy_;
+            return k1.cz_ < k2.cz_;
+        }
+    };
+
+    inline int32_t coord2idx(float xyz) const
+    {
+        return static_cast<int32_t>(xyz / resolution_);
+    }
+
+    void visit_voxels(
+        const std::function<void(const indices_t idx, const voxel_t& vxl)>&
+            userCode) const;
+    
+    /// Returns the number of occupied voxels.
+    size_t size() const;
+
+   private:
+    /** Voxel size (meters) or resolution. */
+    float resolution_ = 0.20f;
+
+    /** The actual hash map. Hidden inside a PIMP to prevent problems with
+     * duplicated TSL library copies in the user space */
+    struct Impl;
+    mrpt::pimpl<Impl> impl_;
 };
 
 }  // namespace mp2p_icp_filters

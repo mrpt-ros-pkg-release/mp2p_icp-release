@@ -1,6 +1,6 @@
 /* -------------------------------------------------------------------------
  *  A repertory of multi primitive-to-primitive (MP2P) ICP algorithms in C++
- * Copyright (C) 2018-2021 Jose Luis Blanco, University of Almeria
+ * Copyright (C) 2018-2024 Jose Luis Blanco, University of Almeria
  * See LICENSE for license information.
  * ------------------------------------------------------------------------- */
 /**
@@ -19,50 +19,51 @@ using namespace mp2p_icp;
 void QualityEvaluator_PairedRatio::initialize(
     const mrpt::containers::yaml& params)
 {
-    // By default, matchers only assign one pairing to each global point.
-    // However, in quality assesment, it DOES make sense to count several times
-    // the same global point:
-    mrpt::containers::yaml p = params;
-    if (!p.has("allowMatchAlreadyMatchedGlobalPoints"))
-        p["allowMatchAlreadyMatchedGlobalPoints"] = true;
+    MCP_LOAD_OPT(params, reuse_icp_pairings);
+    MCP_LOAD_OPT(params, absolute_minimum_pairing_ratio);
 
-    matcher_.initialize(p);
+    if (!reuse_icp_pairings)
+    {
+        // By default, matchers only assign one pairing to each global point.
+        // However, in quality assesment, it DOES make sense to count several
+        // times the same global point:
+        mrpt::containers::yaml p = params;
+        if (!p.has("allowMatchAlreadyMatchedGlobalPoints"))
+            p["allowMatchAlreadyMatchedGlobalPoints"] = true;
+
+        matcher_.initialize(p);
+    }
 }
 
-double QualityEvaluator_PairedRatio::evaluate(
+QualityEvaluator::Result QualityEvaluator_PairedRatio::evaluate(
     const metric_map_t& pcGlobal, const metric_map_t& pcLocal,
-    const mrpt::poses::CPose3D&      localPose,
-    [[maybe_unused]] const Pairings& pairingsFromICP) const
+    const mrpt::poses::CPose3D& localPose,
+    const Pairings&             pairingsFromICP) const
 {
-    mp2p_icp::Pairings pairings;
+    const mp2p_icp::Pairings* pairings = nullptr;
+    mp2p_icp::Pairings        newPairings;
 
-    MatchState ms(pcGlobal, pcLocal);
-
-    matcher_.match(pcGlobal, pcLocal, localPose, {}, ms, pairings);
-
-    // The ratio must be accounted for using the number of points in
-    // the active layers:
-    size_t nEffectiveLocalPoints = 0;
-    if (matcher_.weight_pt2pt_layers.empty())
+    if (reuse_icp_pairings)
     {
-        // all layers:
-        nEffectiveLocalPoints = pcLocal.size_points_only();
+        // Use last pairings:
+        pairings = &pairingsFromICP;
     }
     else
     {
-        // only selected ones:
-        for (const auto& p : matcher_.weight_pt2pt_layers)
-        {
-            for (const auto& kv : p.second)
-            {
-                const auto& localLayerName = kv.first;
-                nEffectiveLocalPoints +=
-                    pcLocal.point_layer(localLayerName)->size();
-            }
-        }
+        MatchState ms(pcGlobal, pcLocal);
+        matcher_.match(pcGlobal, pcLocal, localPose, {}, ms, newPairings);
+
+        pairings = &newPairings;
     }
 
-    ASSERT_(nEffectiveLocalPoints != 0);
+    const auto nEffectiveLocalPoints = pairings->potential_pairings;
 
-    return pairings.size() / double(nEffectiveLocalPoints);
+    Result r;
+    r.quality = nEffectiveLocalPoints
+                    ? pairings->size() / double(nEffectiveLocalPoints)
+                    : .0;
+
+    r.hard_discard = r.quality < absolute_minimum_pairing_ratio;
+
+    return r;
 }
