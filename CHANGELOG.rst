@@ -2,6 +2,11 @@
 Changelog for package mp2p_icp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+1.5.4 (2024-08-20)
+------------------
+* Do not use Eigen::Vector for compatibility with Eigen3 <3.4 in ROS Noetic
+* Contributors: Jose Luis Blanco-Claraco
+
 1.5.3 (2024-08-20)
 ------------------
 * Re-add ROS1 Noetic as supported distribution
