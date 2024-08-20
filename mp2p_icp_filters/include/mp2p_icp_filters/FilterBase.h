@@ -1,6 +1,6 @@
 /* -------------------------------------------------------------------------
  * A repertory of multi primitive-to-primitive (MP2P) ICP algorithms in C++
- * Copyright (C) 2018-2021 Jose Luis Blanco, University of Almeria
+ * Copyright (C) 2018-2024 Jose Luis Blanco, University of Almeria
  * See LICENSE for license information.
  * ------------------------------------------------------------------------- */
 /**
@@ -12,8 +12,11 @@
 
 #pragma once
 
+#include <mp2p_icp/Parameterizable.h>
 #include <mp2p_icp/metricmap.h>
+#include <mp2p_icp_filters/sm2mm.h>
 #include <mrpt/containers/yaml.h>
+#include <mrpt/core/optional_ref.h>
 #include <mrpt/maps/CPointsMap.h>
 #include <mrpt/obs/obs_frwds.h>
 #include <mrpt/rtti/CObject.h>
@@ -21,6 +24,11 @@
 
 #include <cstdint>
 #include <stdexcept>
+
+namespace mrpt::system
+{
+class CTimeLogger;
+}
 
 namespace mp2p_icp_filters
 {
@@ -35,7 +43,8 @@ namespace mp2p_icp_filters
  * \sa Generator
  */
 class FilterBase : public mrpt::rtti::CObject,  // RTTI support
-                   public mrpt::system::COutputLogger  // Logging support
+                   public mrpt::system::COutputLogger,  // Logging support
+                   public mp2p_icp::Parameterizable  // Dynamic parameters
 {
     DEFINE_VIRTUAL_MRPT_OBJECT(FilterBase)
 
@@ -62,14 +71,16 @@ using FilterPipeline = std::vector<FilterBase::Ptr>;
 
 /** Applies a pipeline of filters to a given metric_map_t  */
 void apply_filter_pipeline(
-    const FilterPipeline& filters, mp2p_icp::metric_map_t& inOut);
+    const FilterPipeline& filters, mp2p_icp::metric_map_t& inOut,
+    const mrpt::optional_ref<mrpt::system::CTimeLogger>& profiler =
+        std::nullopt);
 
 /** Creates a pipeline of filters from a YAML configuration block (a sequence).
  *  Refer to YAML file examples. Returns an empty pipeline for an empty or null
  * yaml node.
  * Returned filters are already initialize()'d.
  */
-FilterPipeline filter_pipeline_from_yaml(
+[[nodiscard]] FilterPipeline filter_pipeline_from_yaml(
     const mrpt::containers::yaml&       c,
     const mrpt::system::VerbosityLevel& vLevel = mrpt::system::LVL_INFO);
 
@@ -80,7 +91,7 @@ FilterPipeline filter_pipeline_from_yaml(
  *  Refer to YAML file examples.
  * Returned filters are already initialize()'d.
  */
-FilterPipeline filter_pipeline_from_yaml_file(
+[[nodiscard]] FilterPipeline filter_pipeline_from_yaml_file(
     const std::string&                  filename,
     const mrpt::system::VerbosityLevel& vLevel = mrpt::system::LVL_INFO);
 

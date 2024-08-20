@@ -1,6 +1,6 @@
 /* -------------------------------------------------------------------------
  *  A repertory of multi primitive-to-primitive (MP2P) ICP algorithms in C++
- * Copyright (C) 2018-2021 Jose Luis Blanco, University of Almeria
+ * Copyright (C) 2018-2024 Jose Luis Blanco, University of Almeria
  * See LICENSE for license information.
  * ------------------------------------------------------------------------- */
 
@@ -21,7 +21,9 @@ enum class IterTermReason : uint8_t
     NoPairings,
     SolverError,
     MaxIterations,
-    Stalled
+    Stalled,
+    QualityCheckpointFailed,
+    HookRequest
 };
 
 }  // namespace mp2p_icp
@@ -32,4 +34,6 @@ MRPT_FILL_ENUM(IterTermReason::NoPairings);
 MRPT_FILL_ENUM(IterTermReason::SolverError);
 MRPT_FILL_ENUM(IterTermReason::MaxIterations);
 MRPT_FILL_ENUM(IterTermReason::Stalled);
+MRPT_FILL_ENUM(IterTermReason::QualityCheckpointFailed);
+MRPT_FILL_ENUM(IterTermReason::HookRequest);
 MRPT_ENUM_TYPE_END()

@@ -1,6 +1,6 @@
 /* -------------------------------------------------------------------------
  *  A repertory of multi primitive-to-primitive (MP2P) ICP algorithms in C++
- * Copyright (C) 2018-2021 Jose Luis Blanco, University of Almeria
+ * Copyright (C) 2018-2024 Jose Luis Blanco, University of Almeria
  * See LICENSE for license information.
  * ------------------------------------------------------------------------- */
 /**
@@ -25,10 +25,10 @@
 #include <mrpt/math/TPose3D.h>
 #include <mrpt/rtti/CObject.h>
 #include <mrpt/system/COutputLogger.h>
+#include <mrpt/system/CTimeLogger.h>
 
 #include <cstdint>
-#include <functional>  //reference_wrapper
-#include <memory>
+#include <functional>
 
 namespace mp2p_icp
 {
@@ -43,8 +43,8 @@ namespace mp2p_icp
  * \todo Add pipeline picture.
  *
  * Several solvers may exists, but the output from the first one returning
- * "true" will be used. This is by design, to enable different solver algorithms
- * depending on the ICP iteration.
+ * `true` will be used. This is by design, to enable different solver algorithms
+ * depending on the ICP iteration or the type of geometric entities.
  *
  * \ingroup mp2p_icp_grp
  */
@@ -61,6 +61,8 @@ class ICP : public mrpt::system::COutputLogger, public mrpt::rtti::CObject
         const metric_map_t& pcLocal, const metric_map_t& pcGlobal,
         const mrpt::math::TPose3D& initialGuessLocalWrtGlobal,
         const Parameters& p, Results& result,
+        const std::optional<mrpt::poses::CPose3DPDFGaussianInf>& prior =
+            std::nullopt,
         const mrpt::optional_ref<LogRecord>& outputDebugInfo = std::nullopt);
 
     /** @name Module: Solver instances
@@ -180,6 +182,14 @@ class ICP : public mrpt::system::COutputLogger, public mrpt::rtti::CObject
 
     /** @} */
 
+    void attachToParameterSource(ParameterSource& source)
+    {
+        for (auto& o : matchers()) o->attachToParameterSource(source);
+        for (auto& o : solvers()) o->attachToParameterSource(source);
+        for (auto& o : quality_evaluators())
+            o.obj->attachToParameterSource(source);
+    }
+
     /** For whole-ICP overriden classes (e.g. external ICP library wrappers),
      * initialize those external libraries with these parameters.
      * Invoked from mp2p_icp::icp_pipeline_from_yaml().
@@ -192,11 +202,43 @@ class ICP : public mrpt::system::COutputLogger, public mrpt::rtti::CObject
         // Default: do nothing
     }
 
+    struct IterationHook_Input
+    {
+        IterationHook_Input() = default;
+
+        const metric_map_t*     pcGlobal         = nullptr;
+        const metric_map_t*     pcLocal          = nullptr;
+        const Pairings*         currentPairings  = nullptr;
+        const OptimalTF_Result* currentSolution  = nullptr;
+        uint32_t                currentIteration = 0;
+    };
+    struct IterationHook_Output
+    {
+        IterationHook_Output() = default;
+        
+        bool request_stop = false;
+    };
+
+    using iteration_hook_t =
+        std::function<IterationHook_Output(const IterationHook_Input&)>;
+
+    void setIterationHook(const iteration_hook_t& ih)
+    {
+        iteration_hook_ = ih;
+    }
+
+    const mrpt::system::CTimeLogger& profiler() const { return profiler_; }
+    mrpt::system::CTimeLogger&       profiler() { return profiler_; }
+
    protected:
     solver_list_t       solvers_;
     matcher_list_t      matchers_;
     quality_eval_list_t quality_evaluators_ = {
         {QualityEvaluator_PairedRatio::Create(), 1.0}};
+
+    iteration_hook_t iteration_hook_;
+
+    mrpt::system::CTimeLogger profiler_{false /*disabled*/, "mp2p_icp::ICP"};
 
     static void save_log_file(const LogRecord& log, const Parameters& p);
 
@@ -209,11 +251,13 @@ class ICP : public mrpt::system::COutputLogger, public mrpt::rtti::CObject
 
         const metric_map_t& pcGlobal;
         const metric_map_t& pcLocal;
-        std::string         layerOfLargestPc;
         Pairings            currentPairings;
         OptimalTF_Result    currentSolution;
         uint32_t            currentIteration = 0;
         LogRecord*          log              = nullptr;
     };
+
+   private:
+    ParameterSource ownParamSource_;
 };
 }  // namespace mp2p_icp
