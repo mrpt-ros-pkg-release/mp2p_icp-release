@@ -1,3 +1,26 @@
+## mp2p_icp (noetic) - 1.5.5-1
+
+The packages in the `mp2p_icp` repository were released into the `noetic` distro by running `/home/jlblanco/code/bloom-venv/bin/bloom-release -y -r noetic mp2p_icp` on `Tue, 27 Aug 2024 14:09:42 -0000`
+
+The `mp2p_icp` package was released.
+
+Version of package(s) in repository `mp2p_icp`:
+
+- upstream repository: https://github.com/MOLAorg/mp2p_icp.git
+- release repository: https://github.com/mrpt-ros-pkg-release/mp2p_icp-release.git
+- rosdistro version: `1.5.4-1`
+- old version: `1.5.4-1`
+- new version: `1.5.5-1`
+
+Versions of tools used:
+
+- bloom version: `0.11.2`
+- catkin_pkg version: `0.5.2`
+- rosdep version: `0.22.2`
+- rosdistro version: `0.9.0`
+- vcstools version: `0.1.42`
+
+
 ## mp2p_icp (noetic) - 1.5.4-1
 
 The packages in the `mp2p_icp` repository were released into the `noetic` distro by running `/home/jlblanco/code/bloom-venv/bin/bloom-release -y -r noetic mp2p_icp` on `Tue, 20 Aug 2024 17:17:48 -0000`
