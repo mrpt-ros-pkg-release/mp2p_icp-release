@@ -1,4 +1,4 @@
-From ce170d65bdd53e481fa6dac032bfa8b34f2c3dcd Mon Sep 17 00:00:00 2001
+From ef1de81a7de276873fec24ae5a2d0b719edbdac0 Mon Sep 17 00:00:00 2001
 From: Jose Luis Blanco-Claraco <joseluisblancoc@gmail.com>
 Date: Mon, 16 Sep 2024 22:39:19 +0200
 Subject: [PATCH] Fix usage of DEB_HOST_MULTIARCH in dh_shlibdeps
